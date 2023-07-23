@@ -40,7 +40,6 @@ def cleanup():
     show_year_counts(vehicles)
 
 
-
 def show_manufacturer_counts(vehicles):
     manufacturer_counts = vehicles["manufacturer"].value_counts()
     print(manufacturer_counts)
@@ -54,6 +53,7 @@ def show_manufacturer_counts(vehicles):
     )
     plt.savefig("images/manufacturer_counts.png")
 
+
 def show_year_counts(vehicles):
     year_counts = vehicles["year"].value_counts()
     print(year_counts)
@@ -66,7 +66,6 @@ def show_year_counts(vehicles):
         fontsize = 10
     )
     plt.savefig("images/year_counts.png")
-
 
 
 def drop_fields(vehicles):

@@ -1,6 +1,3 @@
+.venv
 vehicles.csv
-bin
-include
-lib
-lib64
-pyvenv.cfg
+new_vehicles.csv

@@ -5,11 +5,9 @@ import pickle
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
-from sklearn.metrics import mean_absolute_error as mae, accuracy_score
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.metrics import mean_absolute_error as mae
 from prettyprinter import pprint
-import sys
-from tee import StdoutTee
 import os
 import json
 
@@ -19,6 +17,7 @@ inpath = 'out\\clean\\filtered_data.csv'
 outroot = 'out\\out_RF\\'
 outbase = outroot + 'base\\'
 outsearch = outroot + 'randomSearch\\'
+seed = 40
 
 def mk_heatmap(df, outpath):
     correlation = df.corr(numeric_only=True)
@@ -43,20 +42,20 @@ def format_data(df, outpath, drop_cols, dummy_cols):
 def search_param():
     #define gridsearch parameters
     #number of trees
-    n_est = [int(x) for x in np.linspace(start=100, stop=5000, num=100)]
+    n_est = [int(x) for x in np.linspace(start=100, stop=1000, num=100)]
     #number of features to consider at each split
     #max_feat = ['sqrt', 'log2']
-    max_feat = [int(x) for x in np.linspace(start=1, stop=50, num=5)]
+    max_feat = ['sqrt', 'log2']
     #depth of each tree
-    max_depth = [int(x) for x in np.linspace(10, 300, num=10)]
+    max_depth = [int(x) for x in np.linspace(10, 100, num=10)]
     max_depth.append(None)
     #minimum sample number to split a node
-    min_sample_split = [2,4,5,8,10,20,50]
+    min_sample_split = [2,5,10]
     #minimum samples per leaf
-    min_sample_leaf = [1,2,4,5,8]
+    min_sample_leaf = [1,2,4]
     #sample selection method
     bootstrap = [True, False]
-    criteria = ['absolute_error', 'squared_error']
+    #criteria = ['absolute_error', 'squared_error']
 
     search_parameters = {
         'n_estimators': n_est,
@@ -65,7 +64,7 @@ def search_param():
         'min_samples_split': min_sample_split,
         'min_samples_leaf': min_sample_leaf,
         'bootstrap': bootstrap,
-        'criterion': criteria
+        #'criterion': criteria
     }
     return search_parameters
 
@@ -100,8 +99,7 @@ def report(model, outpath, X_test, y_test):
     with open(outpath + 'model', mode='wb') as m:
         pickle.dump(obj=model, file=m)
 
-def plots_search(cv_results, grid_parameters):
-    scores_mean = cv_results['mean_test_score']
+
     
 ###################################################################################################################################
 
@@ -111,25 +109,30 @@ if not os.path.exists(outbase):
 
 if not os.path.exists(outsearch):
     os.mkdir(outsearch)
-
+print('loading data')
 df = pd.read_csv(inpath, encoding='utf8')
+print('heatmap')
 mk_heatmap(df=df, outpath=outroot + 'heatmap.png')
+print('splitting data')
 X, y, labels = format_data(df, outpath=outroot + 'dummy_dat.csv', drop_cols=dropped, dummy_cols=dummies)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=False)
 
 #base model train and eval
-base_model = RandomForestRegressor(n_estimators=10, random_state=40)
+print('building base model')
+base_model = RandomForestRegressor(n_estimators=10, random_state=seed)
 base_model.fit(X_train, y_train)
+print('building report and saving base model')
 report(model=base_model, outpath=outbase, X_test=X_test, y_test=y_test)
 
 
 
 
 #set up search cv
+print('setting up randomsearch_cv parameters')
 search_parameters = search_param()
 model = RandomForestRegressor()
 #change interations after testing!!!
-random = RandomizedSearchCV(estimator=model, param_distributions=search_parameters, n_iter=2, cv=3, verbose=2, random_state=47, n_jobs = -1)
+random = RandomizedSearchCV(estimator=model, param_distributions=search_parameters, n_iter=3, cv=3, verbose=2, random_state=seed, n_jobs = -1)
 
 print('starting search')
 #open log and tee output to log
@@ -148,11 +151,14 @@ random.fit(X_train, y_train)
 #logfile.close()
 #print('finished search')
 #select best model
+print('selecting best model')
 best_random = random.best_estimator_
 
 #train and fit base model
 
 
 #report
-
+print('building report and saving selected model and search')
 report(model=best_random, outpath=outsearch, X_test=X_test, y_test=y_test)
+with open(outsearch + 'randomsearch_cv', mode='wb') as m:
+        pickle.dump(obj=model, file=m)

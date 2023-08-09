@@ -36,7 +36,7 @@ import tensorflow_docs.modeling
 DATASET_PATH = "new_vehicles.csv"
 IMAGE_DIR = "images/"
 
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.001
 STEPS_PER_EXECUTION = 1
 BATCH_SIZE = 512
 EPOCHS = 10
@@ -56,12 +56,12 @@ def create_model() -> Model:
     
     model = Sequential(
         [
-            Dense(256, activation="relu"),
-            Dense(128, activation="relu"),
-            Dense(64, activation="relu"),
-            Dense(32, activation="relu"),
-            Dense(16, activation="relu"),
-            Dense(1, activation="relu", name = "output"),
+            Dense(256, activation="relu", kernel_initializer=initializers.RandomUniform()),
+            Dense(128, activation="relu", kernel_initializer=initializers.RandomUniform()),
+            Dense(64, activation="relu", kernel_initializer=initializers.RandomUniform()),
+            Dense(32, activation="relu", kernel_initializer=initializers.RandomUniform()),
+            Dense(16, activation="relu", kernel_initializer=initializers.RandomUniform()),
+            Dense(1, kernel_initializer=initializers.RandomUniform(), name = "output"),
         ]
     )
 
@@ -104,6 +104,8 @@ if __name__ == "__main__":
     
     df: DataFrame = pd.read_csv(DATASET_PATH, encoding = "utf8")
 
+    print(df.describe())
+
     labels = df.columns
     labels = df.columns
     y = df["price"].values
@@ -123,6 +125,8 @@ if __name__ == "__main__":
     X_test_scaled = ct.transform(X_test)
     X_train_scaled = np.asarray(X_train_scaled).astype("float32")
     X_test_scaled = np.asarray(X_test_scaled).astype("float32")
+
+    print(pd.DataFrame(X_train_scaled).describe())
 
     print(f"X_train shape: {X_train.shape}")
     print(f"First element of X_train {X_train[0]}")
@@ -146,10 +150,10 @@ if __name__ == "__main__":
     y_pred = model.predict(X_test_scaled).flatten()
 
     a = plt.axes(aspect='equal')
-    plt.scatter(y_test, y_pred)
+    plt.scatter(y_test[0:1000], y_pred[0:1000])
     plt.xlabel('True Values [Price]')
     plt.ylabel('Predictions [Price]')
-    lims = [0, 100000]
+    lims = [0, 60000]
     plt.xlim(lims)
     plt.ylim(lims)
     plt.plot(lims, lims)

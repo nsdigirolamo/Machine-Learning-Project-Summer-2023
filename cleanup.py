@@ -30,11 +30,12 @@ def drop_fields(vehicles):
         size: A lot of blanks.
         type: May be useful, but has a lot of blanks.
         model: Too many unique values.
+        state: ?
     """
     vehicles = vehicles.drop(
         labels = [
             "condition", "cylinders", "fuel", "title_status", "transmission", 
-            "drive", "size", "type", "model"
+            "drive", "size", "type", "model", "state"
         ],
         axis = 1
     )
@@ -51,8 +52,8 @@ def reformat_strings(vehicles):
     vehicles["manufacturer"] = vehicles["manufacturer"].str.strip()
     # vehicles["model"] = vehicles["model"].str.lower()
     # vehicles["model"] = vehicles["model"].str.strip()
-    vehicles["state"] = vehicles["state"].str.lower()
-    vehicles["state"] = vehicles["state"].str.strip()
+    # vehicles["state"] = vehicles["state"].str.lower()
+    # vehicles["state"] = vehicles["state"].str.strip()
 
     return vehicles
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
 
     # Convert categorical columns to categories
     vehicles = convert_category(vehicles, "manufacturer")
-    vehicles = convert_category(vehicles, "state")
+    # vehicles = convert_category(vehicles, "state")
 
     # Convert to new csv
     vehicles.to_csv("new_vehicles.csv", index = False)

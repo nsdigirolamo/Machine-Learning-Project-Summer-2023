@@ -1,10 +1,13 @@
 from keras.models import Sequential
 from keras.layers import Dense
 from keras import optimizers, initializers, regularizers
+from keras import optimizers, initializers, regularizers
 from keras import losses
 from keras import metrics
 from keras import Model
 from keras.callbacks import History
+
+import dill
 
 import dill
 
@@ -21,6 +24,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 
 import tensorflow as tf
+
+import tensorflow_docs as tfdocs
+import tensorflow_docs.plots
+import tensorflow_docs.modeling
 
 import tensorflow_docs as tfdocs
 import tensorflow_docs.plots
@@ -70,7 +77,12 @@ def create_model() -> Model:
 
 def plot_loss(history: History):
     loss_values = history.history['loss']
+    loss_values = history.history['loss']
     epochs = range(0, EPOCHS)
+    plt.clf()
+    plt.plot(epochs, loss_values, label='Training Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
     plt.clf()
     plt.plot(epochs, loss_values, label='Training Loss')
     plt.xlabel('Epochs')
@@ -92,6 +104,7 @@ if __name__ == "__main__":
     
     df: DataFrame = pd.read_csv(DATASET_PATH, encoding = "utf8")
 
+    labels = df.columns
     labels = df.columns
     y = df["price"].values
     X = df.drop("price", axis = "columns").values
@@ -148,4 +161,4 @@ if __name__ == "__main__":
 
     plot_results(y_test, y_pred)
 
-    model.summary()
+    # model.summary()

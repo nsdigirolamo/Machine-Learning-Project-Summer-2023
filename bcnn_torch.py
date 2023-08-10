@@ -5,7 +5,6 @@ import torch.optim as optim
 
 import pandas as pd
 import matplotlib.pylab as plt
-#import seaborn as sns
 import pickle
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -13,8 +12,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics import MeanAbsoluteError
-#import pickle
-import warnings
+
 
 
 dropped = ['id', 'url', 'region_url', 'image_url', 'description', 'region', 'model', 'paint_color', 'VIN', 'posting_date', 'lat', 'long']
@@ -56,7 +54,6 @@ class Dataset(Dataset):
     def __getitem__(self, idx):
         label = self.y[idx]
         data = self.X[idx]
-        #sample = {'Data': data, 'Label': label}
         return data, label
     
 
@@ -108,9 +105,6 @@ if __name__ == '__main__':
 
 
 
-
-
-
     device = tf.device('cuda' if tf.cuda.is_available() else 'cpu')
     input_dim = X_train_arr.shape[1]
     output_dim = 1
@@ -125,46 +119,94 @@ if __name__ == '__main__':
     X_train_tensor = tf.from_numpy(X_train_arr)
     X_test_tensor = tf.from_numpy(X_test_arr)
     y_train_tensor = tf.from_numpy(y_train_arr).reshape(-1, 1)
-    y_test_tensor = tf.from_numpy(y_train_arr).reshape(-1, 1)
+    y_test_tensor = tf.from_numpy(y_test_arr).reshape(-1, 1)
 
     train_dataset = Dataset(X=X_train_tensor, y=y_train_tensor)
-    test_dataset = Dataset(X=X_test_tensor, y=y_train_tensor)
+    test_dataset = Dataset(X=X_test_tensor, y=y_test_tensor)
     train_dataloader = DataLoader(train_dataset, batch_size=1000, shuffle=True, num_workers=12)
     test_dataloader = DataLoader(test_dataset, batch_size=1000, shuffle=False, num_workers=12)
     mae = MeanAbsoluteError().to(device)
 
-    G_epochs = []
-    G_loss = []
-    G_mae = []
-    for epoch in range(1000):
-        epoch += 1
-        loss = 0.0
-        #inputs = torch.from_numpy(X_train_scaled_arr).to(device, torch.float32)
-        #labels = torch.from_numpy(y_train_arr).to(device, torch.float32)
-        for batch_idx, (inputs, targets) in enumerate(train_dataloader,0):
-            warnings.simplefilter('ignore')
-            #inputs, labels = data
 
-            #inputs, targets = inputs.to(device, torch.float32), 
+    
+    best_err = 10000000000000000000
+    Train_epochs = []
+    Train_loss = []
+    Train_mae = []
+    Test_epochs = []
+    Test_loss = []
+    Test_mae = []
+    for epoch in range(10):
+        epoch += 1
+        train_loss = 0.0
+        test_loss = 0.0
+        error = []
+        loss = []
+        #######################
+        #training
+        ######################
+        for batch_idx, (inputs, targets) in enumerate(train_dataloader,0):
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
             outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            loss.backward()
+            t_loss = criterion(outputs, targets)
+            loss.append(t_loss.item())
+            t_error = mae(outputs, targets)
+            error.append(t_error.item())
+            t_loss.backward()
             optimizer.step()
-            if batch_idx % 100 == 0:
-                error = mae(outputs, targets)
-        print('Epoch: {} |  Train Loss: {} | MSE: {}'.format(epoch, loss, error))
-        G_epochs.append(epoch)
-        G_loss.append(loss)
-        G_mae.append(error)
-    with open('src\\NN_model', mode='wb') as f:
-        model.to('cpu')
-        pickle.dump(model, f)
+            if batch_idx % 20 == 0:
+                print('Epoch: {}, Batch: {} |  Train Loss: {} | MAE: {}'.format(epoch, batch_idx, t_loss, t_error))
+        avg_train_error = sum(error) / len(error)   
+        avg_train_loss = sum(loss) / len(loss) 
+        Train_epochs.append(epoch)
+        Train_loss.append(avg_train_loss)
+        Train_mae.append(avg_train_error)
+        ######################
+        #testing
+        ######################
+        error = []
+        loss = []
+        with tf.no_grad():
+            for batch_idx, (inputs, targets) in enumerate(test_dataloader,0):
+                inputs, targets = inputs.to(device), targets.to(device)
+                outputs = model(inputs)
+                t_loss = criterion(outputs, targets)
+                loss.append(t_loss.item())
+                error.append(mae(outputs, targets).item())
+            avg_test_loss = sum(loss) / len(loss)
+            avg_test_error = sum(error) / len(error)
+            print('**TEST** | Epoch: {} |  Average Test Loss: {} | Average MAE: {}\n\n'.format(epoch, avg_test_loss, avg_test_error))
+            Test_epochs.append(epoch)
+            Test_loss.append(avg_test_loss)
+            Test_mae.append(avg_test_error)
+            if avg_test_error < best_err:
+                print('**New High Score**')
+                print('saving state...')
+                best_err = avg_test_error
+                best_model_stats = {
+                    'state': model.state_dict(),
+                    'MAE': avg_test_error,
+                    'epoch': 0.0
+                }
+                tf.save(best_model_stats, 'C:\\Users\\bcox\\Desktop\\hw3\\src\\nn_out\\checkpoint.pth')
+                print('serializing model')
+                with open('C:\\Users\\bcox\\Desktop\\hw3\\src\\nn_out\\NN_model.pkl', mode='wb') as f:
+                    model.to('cpu')
+                    pickle.dump(model, f)
+                    model.to(device)
+                print('checkpoint complete\n\n')
 
-    stats = list(zip(G_epochs, G_loss, G_mae))
 
-    with open('src\\stats', mode='wb') as f:
-        pickle.dump(stats, f)
+    
+
+    train_stats = list(zip(Train_epochs, Train_loss, Train_mae))
+    test_stats = list(zip(Test_epochs, Test_loss, Test_mae))
+
+    with open('C:\\Users\\bcox\\Desktop\\hw3\\src\\nn_out\\train_stats.pkl', mode='wb') as f:
+        pickle.dump(train_stats, f)
+
+    with open('C:\\Users\\bcox\\Desktop\\hw3\\src\\nn_out\\test_stats.pkl', mode='wb') as f:
+        pickle.dump(test_stats, f)
 
 
